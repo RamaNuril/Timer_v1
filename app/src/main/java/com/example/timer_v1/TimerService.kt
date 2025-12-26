@@ -33,14 +33,22 @@ class TimerService: Service() {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var job: Job? = null
+    private var isRunning = false
 
+    fun setIsRunning(state: Boolean){
+        this.isRunning = state
+    }
+
+    fun getIsRunning(): Boolean{
+        return this.isRunning
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         return binder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     fun setCallback(callback: TimerCallback){
@@ -48,10 +56,13 @@ class TimerService: Service() {
     }
 
     fun startTimer(inputTime: Int = 0){
-        job =scope.launch {
+        if(getIsRunning()) return
+        setIsRunning(true)
+        job = scope.launch {
             for (i in inputTime -1 downTo 0){
                 delay(1000)
                 Log.d("TimerService", "Timer: $i")
+                Log.d("TimerService", "isRunning = ${isRunning}")
                 withContext(Dispatchers.Main){
                     callback?.onTimerUpdate(i)
                 }
@@ -61,19 +72,31 @@ class TimerService: Service() {
                 callback?.onFinished(0)
             }
 
+            setIsRunning(false)
             stopSelf()
         }
     }
 
-    fun stopTimer(){
-        job?.cancel()
-        job = null
+    fun stopTimer() {
+        Log.d("TimerService", "STOP TIMER!! (SERVICE) 1")
+        if(isRunning){
+            Log.d("TimerService", "STOP TIMER!! (SERVICE) 2")
+            job?.cancel()
+            job = null
+            setIsRunning(false)
+            stopSelf()
+        }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
-
-        job?.cancel()
-        job = null
+        if (job?.isActive == true){
+            Log.d("TimerService", "onDestroy")
+            job?.cancel()
+            job = null
+            setIsRunning(false)
+            stopSelf()
+        }
     }
 }

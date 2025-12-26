@@ -10,16 +10,17 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.timer_v1.databinding.ActivityMainBinding
-import kotlin.text.toInt
 
 class MainActivity : AppCompatActivity(),
     TimerService.TimerCallback{
-        // cek status commit
         private lateinit var binding: ActivityMainBinding
         private lateinit var intent: Intent
         private var myTimer: TimerService? = null
         private var isBound = false
+        private var serviceIsRunning = false
         private var time = 0
+        private var timestamp = 0L
+        private var notFirstOnStart = false
 
         private val serviceConnection = object : ServiceConnection{
             override fun onServiceConnected(
@@ -30,6 +31,10 @@ class MainActivity : AppCompatActivity(),
                 myTimer = binder.getService()
                 myTimer?.setCallback(this@MainActivity)
                 isBound = true
+                if (notFirstOnStart){
+                    myTimer?.startTimer(time - timestamp.toInt())
+                    binding.time.text = (time - timestamp).toString()
+                }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -48,8 +53,9 @@ class MainActivity : AppCompatActivity(),
         override fun onStart() {
             super.onStart()
 
-            intent = Intent(this, TimerService::class.java)
-            bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+            this.timestamp = ((System.currentTimeMillis()/1000) - this.timestamp)
+            serviceConfig(serviceIsRunning, isBound)
+            Log.d("TimerService", "onStart -> Foreground = $isBound")
 
             setUI()
         }
@@ -57,21 +63,11 @@ class MainActivity : AppCompatActivity(),
         override fun onStop() {
             super.onStop()
 
-//            if (isBound){
-//                unbindService(serviceConnection)
-//                isBound = false
-//            }
+//            this.timestamp = ((System.currentTimeMillis()/1000) - this.timestamp)
+
+            notFirstOnStart = myTimer?.getIsRunning() == true
+            stopBindNService()
         }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        if (isBound){
-            unbindService(serviceConnection)
-            isBound = false
-        }
-    }
-
 
         // ===================================================================
         override fun onTimerUpdate(timer: Int) {
@@ -80,7 +76,11 @@ class MainActivity : AppCompatActivity(),
 
         override fun onFinished(finishTime: Int) {
             binding.time.text = finishTime.toString()
+            this.timestamp = 0
+            myTimer?.stopTimer()
+            stopBindNService()
             setBtn(false)
+            notFirstOnStart = false
         }
 
         // ===================================================================
@@ -103,10 +103,13 @@ class MainActivity : AppCompatActivity(),
 
                 if (inputTime != null){
                     time = inputTime
+                    binding.time.text = time.toString()
+
+                    serviceConfig(serviceIsRunning, isBound)
+
                     myTimer?.startTimer(time)
 
                     // mengubah text time
-                    binding.time.text = time.toString()
 
                     // bagian tambahan untuk set tv `time`, menghapus input et, serta menutup keyboard.
                     binding.eTnum.text.clear()
@@ -116,6 +119,7 @@ class MainActivity : AppCompatActivity(),
 
                     // atur button
                     setBtn(true)
+                    this.timestamp = System.currentTimeMillis() / 1000
                 }else{
                     Toast.makeText(this, "Enter a Number", Toast.LENGTH_SHORT).show()
                 }
@@ -123,8 +127,33 @@ class MainActivity : AppCompatActivity(),
 
             binding.btnStop1.setOnClickListener {
                 myTimer?.stopTimer()
-
+                stopBindNService()
+                notFirstOnStart = false
+                this.timestamp = 0
                 setBtn(false)
+            }
+        }
+
+        private fun serviceConfig(serviceIsRun: Boolean, isBind: Boolean){
+            intent = Intent(this, TimerService::class.java)
+            if (!serviceIsRun){
+                startService(intent)
+                this.serviceIsRunning = true
+            }
+
+            if (!isBind){
+                bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+                this.isBound = true
+            }
+        }
+
+        fun stopBindNService(){
+            Log.d("TimerService", "STOP TIMER!! (MAIN)")
+            if (isBound){
+                unbindService(serviceConnection)
+                stopService(intent)
+                isBound = false
+                serviceIsRunning = false
             }
         }
 }
