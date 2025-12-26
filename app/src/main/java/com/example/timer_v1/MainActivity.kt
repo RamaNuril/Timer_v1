@@ -14,6 +14,7 @@ import kotlin.text.toInt
 
 class MainActivity : AppCompatActivity(),
     TimerService.TimerCallback{
+        // cek status commit
         private lateinit var binding: ActivityMainBinding
         private lateinit var intent: Intent
         private var myTimer: TimerService? = null
