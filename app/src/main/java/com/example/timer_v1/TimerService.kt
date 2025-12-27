@@ -34,7 +34,6 @@ class TimerService: Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var job: Job? = null
 
-
     override fun onBind(intent: Intent?): IBinder? {
         return binder
     }
@@ -49,11 +48,14 @@ class TimerService: Service() {
 
     fun startTimer(inputTime: Int = 0){
         job =scope.launch {
-            for (i in inputTime -1 downTo 0){
-                delay(1000)
-                Log.d("TimerService", "Timer: $i")
-                withContext(Dispatchers.Main){
-                    callback?.onTimerUpdate(i)
+
+            if (inputTime > 0){
+                for (i in inputTime -1 downTo 0){
+                    delay(1000)
+                    Log.d("TimerService", "Timer: $i")
+                    withContext(Dispatchers.Main){
+                        callback?.onTimerUpdate(i)
+                    }
                 }
             }
 
@@ -72,6 +74,7 @@ class TimerService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d("TimerService", "Service - onDestroy()")
 
         job?.cancel()
         job = null

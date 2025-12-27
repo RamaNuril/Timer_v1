@@ -19,6 +19,8 @@ class MainActivity : AppCompatActivity(),
         private var myTimer: TimerService? = null
         private var isBound = false
         private var time = 0
+        private var timerIsStart = false
+        private var timestamp = 0L
 
         private val serviceConnection = object : ServiceConnection{
             override fun onServiceConnected(
@@ -29,6 +31,14 @@ class MainActivity : AppCompatActivity(),
                 myTimer = binder.getService()
                 myTimer?.setCallback(this@MainActivity)
                 isBound = true
+                Log.d("TimerService", "Service - isBind: $isBound")
+                if (timerIsStart){
+                    Log.d("TimerService", "Restart timer")
+                    time -= (System.currentTimeMillis() /1000 - timestamp).toInt()
+                    Log.d("TimerService", "Time: $time")
+                    binding.time.text = time.toString()
+                    myTimer?.startTimer(time)
+                }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -56,20 +66,21 @@ class MainActivity : AppCompatActivity(),
         override fun onStop() {
             super.onStop()
 
+            if (isBound){
+                unbindService(serviceConnection)
+                isBound = false
+                Log.d("TimerService", "Service - isBind: $isBound")
+            }
+        }
+
+        override fun onDestroy() {
+            super.onDestroy()
+
 //            if (isBound){
 //                unbindService(serviceConnection)
 //                isBound = false
 //            }
         }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        if (isBound){
-            unbindService(serviceConnection)
-            isBound = false
-        }
-    }
 
 
         // ===================================================================
@@ -79,6 +90,9 @@ class MainActivity : AppCompatActivity(),
 
         override fun onFinished(finishTime: Int) {
             binding.time.text = finishTime.toString()
+            this.timestamp = 0L
+            timerIsStart = false
+            Log.d("TimerService", "Start timer: $timerIsStart")
             setBtn(false)
         }
 
@@ -113,6 +127,10 @@ class MainActivity : AppCompatActivity(),
                     val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                     imm.hideSoftInputFromWindow(binding.eTnum.windowToken, 0)
 
+                    this.timestamp = System.currentTimeMillis() /1000
+                    timerIsStart = true
+                    Log.d("TimerService", "Start timer: $timerIsStart")
+
                     // atur button
                     setBtn(true)
                 }else{
@@ -122,7 +140,9 @@ class MainActivity : AppCompatActivity(),
 
             binding.btnStop1.setOnClickListener {
                 myTimer?.stopTimer()
-
+                this.timestamp = 0L
+                timerIsStart = false
+                Log.d("TimerService", "Start timer: $timerIsStart")
                 setBtn(false)
             }
         }
