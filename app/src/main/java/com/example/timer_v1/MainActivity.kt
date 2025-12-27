@@ -31,11 +31,8 @@ class MainActivity : AppCompatActivity(),
                 myTimer = binder.getService()
                 myTimer?.setCallback(this@MainActivity)
                 isBound = true
-                Log.d("TimerService", "Service - isBind: $isBound")
                 if (timerIsStart){
-                    Log.d("TimerService", "Restart timer")
                     time -= (System.currentTimeMillis() /1000 - timestamp).toInt()
-                    Log.d("TimerService", "Time: $time")
                     binding.time.text = time.toString()
                     myTimer?.startTimer(time)
                 }
@@ -69,19 +66,8 @@ class MainActivity : AppCompatActivity(),
             if (isBound){
                 unbindService(serviceConnection)
                 isBound = false
-                Log.d("TimerService", "Service - isBind: $isBound")
             }
         }
-
-        override fun onDestroy() {
-            super.onDestroy()
-
-//            if (isBound){
-//                unbindService(serviceConnection)
-//                isBound = false
-//            }
-        }
-
 
         // ===================================================================
         override fun onTimerUpdate(timer: Int) {
@@ -129,7 +115,6 @@ class MainActivity : AppCompatActivity(),
 
                     this.timestamp = System.currentTimeMillis() /1000
                     timerIsStart = true
-                    Log.d("TimerService", "Start timer: $timerIsStart")
 
                     // atur button
                     setBtn(true)
@@ -142,7 +127,6 @@ class MainActivity : AppCompatActivity(),
                 myTimer?.stopTimer()
                 this.timestamp = 0L
                 timerIsStart = false
-                Log.d("TimerService", "Start timer: $timerIsStart")
                 setBtn(false)
             }
         }
